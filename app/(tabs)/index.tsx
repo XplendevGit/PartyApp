@@ -4,6 +4,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Stack, router } from "expo-router";
 import { useEffect } from "react";
 import {
+  ActivityIndicator,
   Dimensions,
   Pressable,
   ScrollView,
@@ -25,10 +26,13 @@ import Animated, {
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+// 🟢 Importamos tu lógica global de Supabase
+import { useDeckStore } from "@/src/store/deckStore";
+
 const { width } = Dimensions.get("window");
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
-// 🧠 1. TIPADO ESTRICTO
+// 🧠 1. TIPADO ESTRICTO (¡INTACTO!)
 type DeckTheme = {
   bg: string;
   border: string;
@@ -54,87 +58,7 @@ interface DeckCardProps {
   onPress: (deck: DeckType) => void;
 }
 
-// 2. DATA TIPADA
-const DECKS: DeckType[] = [
-  {
-    id: "d290f1ee-6c54-4b01-90e6-d701748f0851",
-    title: "Previa Piola",
-    description: "Suave, rompehielos. Para empezar la noche sin morir.",
-    icon: "🍻",
-    type: "FREE",
-    theme: {
-      bg: "bg-cyan-950",
-      border: "border-cyan-800",
-      borderBottom: "border-cyan-700",
-      textTitle: "text-cyan-400",
-      textDesc: "text-cyan-100/70",
-      particleColor: "rgba(34, 211, 238, 0.2)",
-    },
-  },
-  {
-    id: "e439569b-9806-441d-91b7-60e0a4ec2912",
-    title: "Destrucción",
-    description: "Cultura chupística, retos absurdos. Que Dios se apiade.",
-    icon: "💀",
-    type: "FREE",
-    theme: {
-      bg: "bg-rose-950",
-      border: "border-rose-800",
-      borderBottom: "border-rose-700",
-      textTitle: "text-rose-400",
-      textDesc: "text-rose-100/70",
-      particleColor: "rgba(251, 113, 133, 0.2)",
-    },
-  },
-  {
-    id: "f6324908-412e-4b2e-84d4-28b3b3fa1094",
-    title: "Familiar",
-    description: "Cero morbo, tallas blancas. Para jugar con la tía.",
-    icon: "👨‍👩‍👧‍👦",
-    type: "FREE",
-    theme: {
-      bg: "bg-emerald-950",
-      border: "border-emerald-800",
-      borderBottom: "border-emerald-700",
-      textTitle: "text-emerald-400",
-      textDesc: "text-emerald-100/70",
-      particleColor: "rgba(52, 211, 153, 0.2)",
-    },
-  },
-  {
-    id: "a82b9881-1921-4f18-bc71-70ab5570024f",
-    title: "2 Pa 2 / Citas",
-    description: "Ideal para parejas o romper el hielo íntimamente.",
-    icon: "🥂",
-    type: "FREEMIUM",
-    theme: {
-      bg: "bg-fuchsia-950",
-      border: "border-fuchsia-800",
-      borderBottom: "border-fuchsia-700",
-      textTitle: "text-fuchsia-400",
-      textDesc: "text-fuchsia-100/70",
-      particleColor: "rgba(232, 121, 249, 0.2)",
-    },
-  },
-  {
-    id: "c48e244b-4a53-43cb-8c9e-5e7b2cd90ab1",
-    title: "Modo HOT 🔥",
-    description: "Prendas, confesiones fuertes y contacto. Sin censura.",
-    icon: "🌶️",
-    type: "PREMIUM",
-    cost: 500,
-    theme: {
-      bg: "bg-orange-950",
-      border: "border-orange-500",
-      borderBottom: "border-orange-600",
-      textTitle: "text-orange-400",
-      textDesc: "text-orange-100/90",
-      particleColor: "rgba(251, 146, 60, 0.4)",
-    },
-  },
-];
-
-// 3. COMPONENTE CON PROPS TIPADAS
+// 3. COMPONENTE CON PROPS TIPADAS (¡INTACTO Y HERMOSO!)
 const DeckCard = ({ deck, index, onPress }: DeckCardProps) => {
   const shimmerValue = useSharedValue(-width);
   const particle1Y = useSharedValue(0);
@@ -372,6 +296,9 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const tapitas = 150;
 
+  // 🟢 Extraemos datos reales de Supabase
+  const { decks, isLoading, error, fetchDecks } = useDeckStore();
+
   const orb1X = useSharedValue(-50);
   const orb1Y = useSharedValue(-30);
   const orb2X = useSharedValue(100);
@@ -380,6 +307,9 @@ export default function HomeScreen() {
   const neonShadowOp = useSharedValue(1);
 
   useEffect(() => {
+    // 🟢 Disparamos la carga de datos al iniciar
+    fetchDecks();
+
     orb1X.value = withRepeat(
       withSequence(
         withTiming(50, { duration: 15000, easing: Easing.linear }),
@@ -423,7 +353,7 @@ export default function HomeScreen() {
       -1,
       false,
     );
-  }, [orb1X, orb1Y, orb2X, orb2Scale, neonShadowOp]);
+  }, []);
 
   const animatedOrb1 = useAnimatedStyle(() => ({
     transform: [{ translateX: orb1X.value }, { translateY: orb1Y.value }],
@@ -453,6 +383,25 @@ export default function HomeScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
     router.push(`/players/${deck.id}`);
   };
+
+  if (isLoading) {
+    return (
+      <View className="flex-1 bg-[#020617] justify-center items-center">
+        <ActivityIndicator size="large" color="#22d3ee" />
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View className="flex-1 bg-[#020617] justify-center items-center px-5">
+        <Text className="text-rose-500 text-xl font-bold text-center mb-4">
+          Error de Conexión
+        </Text>
+        <Text className="text-white text-center">{error}</Text>
+      </View>
+    );
+  }
 
   return (
     <View
@@ -495,7 +444,6 @@ export default function HomeScreen() {
         />
       </View>
 
-      {/* 👑 AQUI USAMOS EL NUEVO COMPONENTE GLOBAL */}
       <TopHeader tapitas={tapitas} />
 
       <ScrollView
@@ -503,7 +451,7 @@ export default function HomeScreen() {
         contentContainerStyle={{
           paddingHorizontal: 20,
           paddingTop: 10,
-          paddingBottom: insets.bottom + 120, // 👈 Se mantiene para dejarle espacio al Custom Tab Bar
+          paddingBottom: insets.bottom + 120,
         }}
         className="z-10"
       >
@@ -533,14 +481,112 @@ export default function HomeScreen() {
         </Animated.View>
 
         <View className="gap-5 pb-6">
-          {DECKS.map((deck, index) => (
-            <DeckCard
-              key={deck.id}
-              deck={deck}
-              index={index}
-              onPress={handleSelectDeck}
-            />
-          ))}
+          {/* 🟢 LA FUSIÓN PERFECTA: BACKEND (Datos/Acceso) + FRONTEND (UI/Diseño) */}
+          {decks.map((deck, index) => {
+            // 1. FRONTEND: Valores visuales por defecto
+            let exactTheme = {
+              bg: "bg-slate-900",
+              border: "border-slate-800",
+              borderBottom: "border-slate-700",
+              textTitle: "text-slate-400",
+              textDesc: "text-slate-400",
+              particleColor: "rgba(255,255,255,0.2)",
+            };
+            let exactIcon = "🎲";
+
+            // 2. FRONTEND: Buscamos el nombre para inyectar TUS diseños especiales e íconos
+            const titleLower = deck.title.toLowerCase();
+
+            if (titleLower.includes("previa")) {
+              exactIcon = "🍻";
+              exactTheme = {
+                bg: "bg-cyan-950",
+                border: "border-cyan-800",
+                borderBottom: "border-cyan-700",
+                textTitle: "text-cyan-400",
+                textDesc: "text-cyan-100/70",
+                particleColor: "rgba(34, 211, 238, 0.2)",
+              };
+            } else if (titleLower.includes("gamer")) {
+              exactIcon = "👾";
+              exactTheme = {
+                bg: "bg-indigo-950",
+                border: "border-indigo-800",
+                borderBottom: "border-indigo-700",
+                textTitle: "text-indigo-400",
+                textDesc: "text-indigo-100/70",
+                particleColor: "rgba(99, 102, 241, 0.2)",
+              };
+            } else if (
+              titleLower.includes("destrucción") ||
+              titleLower.includes("destruccion")
+            ) {
+              exactIcon = "💀";
+              exactTheme = {
+                bg: "bg-rose-950",
+                border: "border-rose-800",
+                borderBottom: "border-rose-700",
+                textTitle: "text-rose-400",
+                textDesc: "text-rose-100/70",
+                particleColor: "rgba(251, 113, 133, 0.2)",
+              };
+            } else if (titleLower.includes("familiar")) {
+              exactIcon = "👨‍👩‍👧‍👦";
+              exactTheme = {
+                bg: "bg-emerald-950",
+                border: "border-emerald-800",
+                borderBottom: "border-emerald-700",
+                textTitle: "text-emerald-400",
+                textDesc: "text-emerald-100/70",
+                particleColor: "rgba(52, 211, 153, 0.2)",
+              };
+            } else if (
+              titleLower.includes("2 pa 2") ||
+              titleLower.includes("citas")
+            ) {
+              exactIcon = "🥂";
+              exactTheme = {
+                bg: "bg-fuchsia-950",
+                border: "border-fuchsia-800",
+                borderBottom: "border-fuchsia-700",
+                textTitle: "text-fuchsia-400",
+                textDesc: "text-fuchsia-100/70",
+                particleColor: "rgba(232, 121, 249, 0.2)",
+              };
+            } else if (titleLower.includes("hot")) {
+              exactIcon = "🌶️";
+              exactTheme = {
+                bg: "bg-orange-950",
+                border: "border-orange-500",
+                borderBottom: "border-orange-600",
+                textTitle: "text-orange-400",
+                textDesc: "text-orange-100/90",
+                particleColor: "rgba(251, 146, 60, 0.4)",
+              };
+            }
+
+            // 3. EMPAQUETAMOS: El Backend pone las reglas, el Frontend pone el estilo
+            const frontendDeck: DeckType = {
+              id: deck.id, // BACKEND
+              title: deck.title, // BACKEND
+              description: deck.description || "", // BACKEND
+              type:
+                (deck.unlockType as "FREE" | "FREEMIUM" | "PREMIUM") || "FREE", // BACKEND (Regla de negocio)
+              cost: deck.unlockCost || 0, // BACKEND (Regla de negocio)
+
+              icon: exactIcon, // FRONTEND (Diseño visual estricto)
+              theme: exactTheme, // FRONTEND (Diseño visual estricto)
+            };
+
+            return (
+              <DeckCard
+                key={frontendDeck.id}
+                deck={frontendDeck}
+                index={index}
+                onPress={handleSelectDeck}
+              />
+            );
+          })}
         </View>
       </ScrollView>
     </View>
