@@ -26,7 +26,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import ViewShot, { captureRef } from "react-native-view-shot";
-import { usePlayerStore } from "../store/playerStore";
+import { usePlayerStore } from "../src/store/playerStore";
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 

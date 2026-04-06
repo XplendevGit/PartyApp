@@ -1,5 +1,5 @@
-import CardPreviewModal from "@/components/ui/CardPreviewModal"; // 👈 Tu nuevo componente 3D
-import TopHeader from "@/components/ui/TopHeader";
+import CardPreviewModal from "@/src/components/ui/CardPreviewModal"; // 👈 Tu nuevo componente 3D
+import TopHeader from "@/src/components/ui/TopHeader";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
@@ -19,7 +19,7 @@ import Animated, {
   FadeInLeft,
   useAnimatedStyle,
   useSharedValue,
-  withSpring
+  withSpring,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 

@@ -25,7 +25,7 @@ import Animated, {
   withSpring,
   withTiming,
 } from "react-native-reanimated";
-import { Player, usePlayerStore } from "../../store/playerStore";
+import { Player, usePlayerStore } from "../../src/store/playerStore";
 
 const { width } = Dimensions.get("window");
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);

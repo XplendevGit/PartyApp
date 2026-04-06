@@ -10,7 +10,7 @@ import "react-native-reanimated";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import "../global.css";
 
-import { useColorScheme } from "@/hooks/use-color-scheme";
+import { useColorScheme } from "@/src/hooks/use-color-scheme";
 
 export const unstable_settings = {
   anchor: "(tabs)",

@@ -5,11 +5,11 @@ import React, { useCallback } from "react";
 import { FlatList, Pressable, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import CardPreviewModal from "../components/ui/CardPreviewModal";
-import { SelectableCard } from "../components/ui/SelectableCard";
-import TopHeader from "../components/ui/TopHeader"; // <-- AQUÍ IMPORTAMOS TU TOPHEADER
-import { CardData, DECKS_LIST } from "../constants/decks";
-import { useDecksLogic } from "../hooks/useDecksLogic";
+import CardPreviewModal from "../src/components/ui/CardPreviewModal";
+import { SelectableCard } from "../src/components/ui/SelectableCard";
+import TopHeader from "../src/components/ui/TopHeader"; // <-- AQUÍ IMPORTAMOS TU TOPHEADER
+import { CardData, DECKS_LIST } from "../src/constants/decks";
+import { useDecksLogic } from "../src/hooks/useDecksLogic";
 
 export default function DecksScreen() {
   const insets = useSafeAreaInsets();

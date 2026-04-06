@@ -1,4 +1,4 @@
-import TopHeader from "@/components/ui/TopHeader";
+import TopHeader from "@/src/components/ui/TopHeader";
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import { Stack } from "expo-router";

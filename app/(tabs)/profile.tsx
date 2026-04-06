@@ -11,8 +11,8 @@ import Animated, {
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import TopHeader from "../../components/ui/TopHeader";
-import { AVATARS_LIST, AvatarData } from "../../constants/avatars";
+import TopHeader from "../../src/components/ui/TopHeader";
+import { AVATARS_LIST, AvatarData } from "../../src/constants/avatars";
 
 // Mock del usuario (luego vendrá de Zustand/DB)
 const USER_STATS = {

@@ -5,14 +5,14 @@ import { Stack, router } from "expo-router";
 import React, { useState } from "react";
 import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 import Animated, {
-    FadeInDown,
-    FadeInUp,
-    ZoomIn,
+  FadeInDown,
+  FadeInUp,
+  ZoomIn,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import TopHeader from "../components/ui/TopHeader";
-import { AVATARS_LIST, AvatarData } from "../constants/avatars";
+import TopHeader from "../src/components/ui/TopHeader";
+import { AVATARS_LIST, AvatarData } from "../src/constants/avatars";
 
 export default function AvatarsScreen() {
   const insets = useSafeAreaInsets();

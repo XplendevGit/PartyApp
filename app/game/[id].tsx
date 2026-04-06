@@ -31,8 +31,8 @@ import Animated, {
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { DECK_THEMES, DeckTheme } from "../../constants/gameThemes";
-import { useGameEngine } from "../../hooks/useGameEngine";
+import { DECK_THEMES, DeckTheme } from "../../src/constants/gameThemes";
+import { useGameEngine } from "../../src/hooks/useGameEngine";
 
 // ==========================================
 // COLORES (Se adaptarán al jugador si tiene la propiedad 'color')
