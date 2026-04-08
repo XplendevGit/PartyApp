@@ -5,6 +5,7 @@ import { Stack, router } from "expo-router";
 import { useEffect } from "react";
 import {
   ActivityIndicator,
+  Alert, // 👈 IMPORTADO PARA LA TIENDA
   Dimensions,
   Pressable,
   ScrollView,
@@ -26,14 +27,15 @@ import Animated, {
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-// 🟢 Importamos tu lógica global de Supabase
+// 🟢 Importamos solo tus estados globales REALES
+import { useAuthStore } from "@/src/store/authStore";
 import { useDeckStore } from "@/src/store/deckStore";
 
 const { width } = Dimensions.get("window");
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
-// 🧠 1. TIPADO ESTRICTO (¡INTACTO!)
-type DeckTheme = {
+// 🧠 1. TIPADO ESTRICTO
+export type DeckTheme = {
   bg: string;
   border: string;
   borderBottom: string;
@@ -42,23 +44,24 @@ type DeckTheme = {
   particleColor: string;
 };
 
-type DeckType = {
+export type Deck = {
   id: string;
   title: string;
   description: string;
   icon: string;
   type: "FREE" | "FREEMIUM" | "PREMIUM";
-  cost?: number;
+  cost: number;
+  hasAccess: boolean;
   theme: DeckTheme;
 };
 
 interface DeckCardProps {
-  deck: DeckType;
+  deck: Deck;
   index: number;
-  onPress: (deck: DeckType) => void;
+  onPress: (deck: Deck) => void;
 }
 
-// 3. COMPONENTE CON PROPS TIPADAS (¡INTACTO Y HERMOSO!)
+// 2. COMPONENTE DE TARJETA
 const DeckCard = ({ deck, index, onPress }: DeckCardProps) => {
   const shimmerValue = useSharedValue(-width);
   const particle1Y = useSharedValue(0);
@@ -292,24 +295,28 @@ const DeckCard = ({ deck, index, onPress }: DeckCardProps) => {
   );
 };
 
-export default function HomeScreen() {
+export default function IndexScreen() {
   const insets = useSafeAreaInsets();
-  const tapitas = 150;
 
-  // 🟢 Extraemos datos reales de Supabase
+  // 🟢 3. EXTRAEMOS ESTADOS GLOBALES ESTRICTOS
+  const { user } = useAuthStore();
   const { decks, isLoading, error, fetchDecks } = useDeckStore();
+
+  const tapitas = (user as any)?.tapitas_balance ?? 0;
 
   const orb1X = useSharedValue(-50);
   const orb1Y = useSharedValue(-30);
   const orb2X = useSharedValue(100);
   const orb2Scale = useSharedValue(1);
-
   const neonShadowOp = useSharedValue(1);
 
   useEffect(() => {
-    // 🟢 Disparamos la carga de datos al iniciar
-    fetchDecks();
+    if (user) {
+      fetchDecks();
+    }
+  }, [user]);
 
+  useEffect(() => {
     orb1X.value = withRepeat(
       withSequence(
         withTiming(50, { duration: 15000, easing: Easing.linear }),
@@ -361,30 +368,80 @@ export default function HomeScreen() {
   const animatedOrb2 = useAnimatedStyle(() => ({
     transform: [{ translateX: orb2X.value }, { scale: orb2Scale.value }],
   }));
-
   const animatedTitleNeon = useAnimatedStyle(() => ({
     textShadowColor: `rgba(6, 182, 212, ${neonShadowOp.value})`,
     textShadowRadius: withTiming(neonShadowOp.value * 12, { duration: 100 }),
   }));
 
-  const handleSelectDeck = (deck: DeckType) => {
-    if (deck.type === "PREMIUM") {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-      alert(`🔒 Desbloquear por ${deck.cost} Tapitas. ¡Pronto la Tienda!`);
-      return;
-    }
+  // 🔥 5. LA TIENDA REAL (CERO HARDCODEO)
+  const handleSelectDeck = (deck: Deck) => {
+    if (!deck.hasAccess) {
+      if (deck.type === "PREMIUM") {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
 
-    if (deck.type === "FREEMIUM") {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-      alert("📺 Ver un anuncio de 30s para jugar. ¡Pronto AdMob!");
-      return;
+        Alert.alert(
+          "🔒 Mazo Premium",
+          `¿Quieres desbloquear el mazo '${deck.title}' por ${deck.cost} Tapitas?`,
+          [
+            { text: "Cancelar", style: "cancel" },
+            {
+              text: "Comprar",
+              style: "default",
+              onPress: async () => {
+                if (!user) return;
+
+                if (tapitas >= deck.cost) {
+                  // Llamamos a la lógica real que agregamos en el store
+                  const success = await useDeckStore
+                    .getState()
+                    .unlockPremiumDeck(deck.id, deck.cost, user.id);
+
+                  if (success) {
+                    Haptics.notificationAsync(
+                      Haptics.NotificationFeedbackType.Success,
+                    );
+                    Alert.alert(
+                      "¡Éxito!",
+                      "Mazo desbloqueado para siempre. ¡A beber!",
+                    );
+
+                    // Si tienes un método para refrescar al usuario y actualizar el balance visual, llámalo aquí:
+                    // (useAuthStore.getState() as any).fetchUser?.();
+                  } else {
+                    Alert.alert(
+                      "Error",
+                      useDeckStore.getState().error ||
+                        "Ocurrió un error en la compra.",
+                    );
+                  }
+                } else {
+                  Alert.alert(
+                    "Pobre",
+                    "No tienes suficientes Tapitas. ¡Juega más para ganar o recarga!",
+                  );
+                }
+              },
+            },
+          ],
+        );
+        return;
+      }
+
+      if (deck.type === "FREEMIUM") {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+        Alert.alert(
+          "📺 Freemium",
+          "Ver un anuncio de 30s para jugar. ¡Pronto AdMob!",
+        );
+        return;
+      }
     }
 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
     router.push(`/players/${deck.id}`);
   };
 
-  if (isLoading) {
+  if (!user || isLoading) {
     return (
       <View className="flex-1 bg-[#020617] justify-center items-center">
         <ActivityIndicator size="large" color="#22d3ee" />
@@ -481,112 +538,14 @@ export default function HomeScreen() {
         </Animated.View>
 
         <View className="gap-5 pb-6">
-          {/* 🟢 LA FUSIÓN PERFECTA: BACKEND (Datos/Acceso) + FRONTEND (UI/Diseño) */}
-          {decks.map((deck, index) => {
-            // 1. FRONTEND: Valores visuales por defecto
-            let exactTheme = {
-              bg: "bg-slate-900",
-              border: "border-slate-800",
-              borderBottom: "border-slate-700",
-              textTitle: "text-slate-400",
-              textDesc: "text-slate-400",
-              particleColor: "rgba(255,255,255,0.2)",
-            };
-            let exactIcon = "🎲";
-
-            // 2. FRONTEND: Buscamos el nombre para inyectar TUS diseños especiales e íconos
-            const titleLower = deck.title.toLowerCase();
-
-            if (titleLower.includes("previa")) {
-              exactIcon = "🍻";
-              exactTheme = {
-                bg: "bg-cyan-950",
-                border: "border-cyan-800",
-                borderBottom: "border-cyan-700",
-                textTitle: "text-cyan-400",
-                textDesc: "text-cyan-100/70",
-                particleColor: "rgba(34, 211, 238, 0.2)",
-              };
-            } else if (titleLower.includes("gamer")) {
-              exactIcon = "👾";
-              exactTheme = {
-                bg: "bg-indigo-950",
-                border: "border-indigo-800",
-                borderBottom: "border-indigo-700",
-                textTitle: "text-indigo-400",
-                textDesc: "text-indigo-100/70",
-                particleColor: "rgba(99, 102, 241, 0.2)",
-              };
-            } else if (
-              titleLower.includes("destrucción") ||
-              titleLower.includes("destruccion")
-            ) {
-              exactIcon = "💀";
-              exactTheme = {
-                bg: "bg-rose-950",
-                border: "border-rose-800",
-                borderBottom: "border-rose-700",
-                textTitle: "text-rose-400",
-                textDesc: "text-rose-100/70",
-                particleColor: "rgba(251, 113, 133, 0.2)",
-              };
-            } else if (titleLower.includes("familiar")) {
-              exactIcon = "👨‍👩‍👧‍👦";
-              exactTheme = {
-                bg: "bg-emerald-950",
-                border: "border-emerald-800",
-                borderBottom: "border-emerald-700",
-                textTitle: "text-emerald-400",
-                textDesc: "text-emerald-100/70",
-                particleColor: "rgba(52, 211, 153, 0.2)",
-              };
-            } else if (
-              titleLower.includes("2 pa 2") ||
-              titleLower.includes("citas")
-            ) {
-              exactIcon = "🥂";
-              exactTheme = {
-                bg: "bg-fuchsia-950",
-                border: "border-fuchsia-800",
-                borderBottom: "border-fuchsia-700",
-                textTitle: "text-fuchsia-400",
-                textDesc: "text-fuchsia-100/70",
-                particleColor: "rgba(232, 121, 249, 0.2)",
-              };
-            } else if (titleLower.includes("hot")) {
-              exactIcon = "🌶️";
-              exactTheme = {
-                bg: "bg-orange-950",
-                border: "border-orange-500",
-                borderBottom: "border-orange-600",
-                textTitle: "text-orange-400",
-                textDesc: "text-orange-100/90",
-                particleColor: "rgba(251, 146, 60, 0.4)",
-              };
-            }
-
-            // 3. EMPAQUETAMOS: El Backend pone las reglas, el Frontend pone el estilo
-            const frontendDeck: DeckType = {
-              id: deck.id, // BACKEND
-              title: deck.title, // BACKEND
-              description: deck.description || "", // BACKEND
-              type:
-                (deck.unlockType as "FREE" | "FREEMIUM" | "PREMIUM") || "FREE", // BACKEND (Regla de negocio)
-              cost: deck.unlockCost || 0, // BACKEND (Regla de negocio)
-
-              icon: exactIcon, // FRONTEND (Diseño visual estricto)
-              theme: exactTheme, // FRONTEND (Diseño visual estricto)
-            };
-
-            return (
-              <DeckCard
-                key={frontendDeck.id}
-                deck={frontendDeck}
-                index={index}
-                onPress={handleSelectDeck}
-              />
-            );
-          })}
+          {decks.map((deck, index) => (
+            <DeckCard
+              key={deck.id}
+              deck={deck}
+              index={index}
+              onPress={handleSelectDeck}
+            />
+          ))}
         </View>
       </ScrollView>
     </View>

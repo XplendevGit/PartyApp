@@ -5,6 +5,6 @@ export class GetDecksUseCase {
   constructor(private deckRepository: DeckRepository) {}
 
   async execute(): Promise<Deck[]> {
-    return await this.deckRepository.getAllDecks();
+    return await this.deckRepository.getDecksForUser();
   }
 }

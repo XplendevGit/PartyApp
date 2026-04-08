@@ -3,6 +3,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Stack, router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -21,20 +22,21 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Player, usePlayerStore } from "../../src/store/playerStore";
+import { SessionPlayer, usePlayerStore } from "../../src/store/playerStore";
 
-// Componente individual blindado para evitar el Crash de Reanimated + NativeWind
+interface AnimatedPlayerItemProps {
+  player: SessionPlayer;
+  onCycleVenom: (id: string) => void;
+  onRemove: (id: string) => void;
+  index: number;
+}
+
 const AnimatedPlayerItem = ({
   player,
-  onToggle,
+  onCycleVenom,
   onRemove,
   index,
-}: {
-  player: Player;
-  onToggle: any;
-  onRemove: any;
-  index: number;
-}) => {
+}: AnimatedPlayerItemProps) => {
   return (
     <Animated.View
       entering={FadeInDown.delay(index * 100)
@@ -53,7 +55,7 @@ const AnimatedPlayerItem = ({
           activeOpacity={0.7}
           onPress={() => {
             Haptics.selectionAsync();
-            onToggle(player.id);
+            onCycleVenom(player.id);
           }}
           className="bg-cyan-950 w-16 h-16 rounded-2xl items-center justify-center mr-4 border-[3px] border-cyan-800 shadow-inner"
         >
@@ -65,7 +67,7 @@ const AnimatedPlayerItem = ({
               textShadowRadius: 4,
             }}
           >
-            {player.fuel}
+            {player.venom?.icon || "❓"}
           </Text>
         </TouchableOpacity>
 
@@ -80,8 +82,11 @@ const AnimatedPlayerItem = ({
           >
             {player.name}
           </Text>
-          <Text className="text-cyan-500 font-bold text-[10px] tracking-[0.3em] uppercase mt-1">
-            Gladiador Listo
+          <Text
+            style={{ color: player.color }}
+            className="font-bold text-[10px] tracking-[0.3em] uppercase mt-1"
+          >
+            {player.venom?.name || "Cargando..."}
           </Text>
         </View>
 
@@ -101,12 +106,31 @@ const AnimatedPlayerItem = ({
 };
 
 export default function LobbyScreen() {
-  const { deckId } = useLocalSearchParams<{ deckId: string }>();
+  const { deckId, deckName } = useLocalSearchParams<{
+    deckId: string;
+    deckName?: string;
+  }>();
   const insets = useSafeAreaInsets();
   const [newPlayerName, setNewPlayerName] = useState("");
-  const { players, addPlayer, removePlayer, toggleFuel } = usePlayerStore();
 
-  // Animación de latido para el botón principal
+  const {
+    players,
+    addPlayer,
+    removePlayer,
+    cycleVenom,
+    fetchMasterData,
+    loading,
+    error,
+    availableVenoms,
+  } = usePlayerStore();
+
+  useEffect(() => {
+    const isHotMode =
+      deckName?.toLowerCase().includes("hot") || deckId?.includes("hot");
+    const category = isHotMode ? "hot" : "standard";
+    fetchMasterData(category);
+  }, [deckId, deckName]);
+
   const pulseScale = useSharedValue(1);
   useEffect(() => {
     if (players.length >= 2) {
@@ -129,6 +153,10 @@ export default function LobbyScreen() {
 
   const handleAddPlayer = () => {
     if (newPlayerName.trim().length === 0) return;
+    if (availableVenoms.length === 0) {
+      alert("Los datos del servidor aún no están listos.");
+      return;
+    }
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     addPlayer(newPlayerName.trim());
     setNewPlayerName("");
@@ -166,7 +194,14 @@ export default function LobbyScreen() {
         }}
         className="flex-1 px-5"
       >
-        {/* Input Area */}
+        {loading && <ActivityIndicator color="#22d3ee" className="mb-4" />}
+
+        {error && (
+          <Text className="text-rose-500 text-center mb-4 font-bold text-xs uppercase tracking-widest">
+            Error de conexión BD: {error}
+          </Text>
+        )}
+
         <View className="flex-row gap-3 mb-6 relative z-10">
           <LinearGradient
             colors={["#0f172a", "#020617"]}
@@ -180,11 +215,13 @@ export default function LobbyScreen() {
               className="text-white px-5 py-5 font-black text-xl"
               onSubmitEditing={handleAddPlayer}
               autoCorrect={false}
+              editable={!loading}
             />
           </LinearGradient>
           <TouchableOpacity
             activeOpacity={0.7}
             onPress={handleAddPlayer}
+            disabled={loading}
             className="w-[72px] bg-cyan-600 justify-center items-center rounded-2xl border-b-[6px] border-cyan-900 active:border-b-0 active:translate-y-[6px] shadow-lg shadow-cyan-600/30"
           >
             <Text
@@ -200,13 +237,12 @@ export default function LobbyScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Lista de Jugadores */}
         <ScrollView
           className="flex-1 mt-2"
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: 20 }}
         >
-          {players.length === 0 ? (
+          {players.length === 0 && !loading ? (
             <Animated.View
               entering={FadeInDown}
               className="items-center justify-center mt-20 opacity-40"
@@ -222,19 +258,22 @@ export default function LobbyScreen() {
                 key={player.id}
                 player={player}
                 index={index}
-                onToggle={toggleFuel}
+                onCycleVenom={cycleVenom}
                 onRemove={removePlayer}
               />
             ))
           )}
         </ScrollView>
 
-        {/* Botón de Acción Pesado */}
         <Animated.View style={animatedButtonStyle} className="mt-4">
           <TouchableOpacity
             activeOpacity={0.8}
             onPress={handleStartGame}
-            className={`py-6 rounded-3xl items-center border-b-[8px] border-x-2 border-t-2 relative overflow-hidden active:border-b-0 active:translate-y-[8px] transition-all ${players.length >= 2 ? "bg-emerald-500 border-emerald-900 border-x-emerald-400 border-t-emerald-300 shadow-2xl shadow-emerald-500/50" : "bg-slate-800 border-slate-950 border-x-slate-700 border-t-slate-700 opacity-80"}`}
+            className={`py-6 rounded-3xl items-center border-b-[8px] border-x-2 border-t-2 relative overflow-hidden active:border-b-0 active:translate-y-[8px] transition-all ${
+              players.length >= 2
+                ? "bg-emerald-500 border-emerald-900 border-x-emerald-400 border-t-emerald-300 shadow-2xl shadow-emerald-500/50"
+                : "bg-slate-800 border-slate-950 border-x-slate-700 border-t-slate-700 opacity-80"
+            }`}
           >
             {players.length >= 2 && (
               <LinearGradient
@@ -243,7 +282,9 @@ export default function LobbyScreen() {
               />
             )}
             <Text
-              className={`font-black text-3xl tracking-widest uppercase ${players.length >= 2 ? "text-white" : "text-slate-500"}`}
+              className={`font-black text-3xl tracking-widest uppercase ${
+                players.length >= 2 ? "text-white" : "text-slate-500"
+              }`}
               style={
                 players.length >= 2
                   ? {

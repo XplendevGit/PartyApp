@@ -1,10 +1,23 @@
-export type DeckUnlockType = "FREE" | "FREEMIUM" | "PREMIUM";
+// src/domain/entities/Deck.ts
+
+export type DeckTheme = {
+  bg: string;
+  border: string;
+  borderBottom: string;
+  textTitle: string;
+  textDesc: string;
+  particleColor: string;
+};
+
+export type DeckType = "FREE" | "FREEMIUM" | "PREMIUM";
 
 export interface Deck {
   id: string;
-  title: string; // Lo usaremos para el frontend (en BD es 'name')
+  title: string;
   description: string;
-  icon: string; // Emoji o icono
-  unlockType: DeckUnlockType;
-  unlockCost: number; // Costo en tapitas
+  type: DeckType;
+  cost: number;
+  hasAccess: boolean;
+  icon: string; // 👈 Viene directo de Supabase
+  theme: DeckTheme; // 👈 Viene directo de Supabase
 }
